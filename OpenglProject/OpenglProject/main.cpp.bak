@@ -1,0 +1,409 @@
+#include <chrono>
+#include <ctime>
+#include <math.h>
+#include <random>	
+
+#include "GL/glew.h"
+#include "GL/freeglut.h"
+
+#include "cyMatrix.h"
+#include "cyTriMesh.h"
+#include "cyGL.h"
+
+const float PI = 3.1415926f;
+namespace Parameters 
+{
+	int windowId;
+	GLclampf oldR = 0.0f, oldG = 0.0f, oldB = 0.0f;
+	GLclampf newR = 1.0f, newG = 1.0f, newB = 1.0f;
+	float timeUsed = 0.0f;
+	GLuint verBufObject;
+	GLuint verArrayObject;
+
+	cy::TriMesh meshLoader;
+	namespace Shader 
+	{
+		GLuint shaderProgram;
+		GLchar *vertexsource = nullptr, * fragmentsource = nullptr;
+		GLuint vertexshader, fragmentshader;
+	}
+
+	enum eMouseMode 
+	{
+		edefaultMode,
+		eRotateMode,
+		eZoomMode
+	} curMouseState;
+
+	namespace ViewPort 
+	{
+		bool bProspective = true;
+		float cameraDistance = 20.0f;
+		cy::Point3f cameraRotAxis;
+		cy::Matrix4<float> prevRotMatrixCam = cy::Matrix4<float>::MatrixRotation(cy::Point3f(1.0, 0.0, 0.0), 0);
+		cy::Matrix4<float> curRotMatrixCam = cy::Matrix4<float>::MatrixRotation(cy::Point3f(1.0, 0.0, 0.0), 0);
+		cy::Matrix4<float> viewPort;
+		float cameraRotAngle = 0.0f;
+		float lastX = 0, lastY = 0;
+	}
+}
+
+
+namespace MathFunc
+{
+	float lerp(float a, float b, float percentage)
+	{
+		if (percentage > 1.0f) percentage = 1.0f;
+		if (percentage < 0.0f) percentage = 0.0f;
+		return a * (1 - percentage) + b*percentage;
+	}
+}
+namespace UtilityFunc
+{
+	/* A simple function that will read a file into an allocated char pointer buffer */
+	char* filetobuf(char *file)
+	{
+		FILE *fptr;
+		long length;
+		char *buf;
+
+		fptr = fopen(file, "rb"); /* Open file for reading */
+		if (!fptr) /* Return NULL on failure */
+			return NULL;
+		fseek(fptr, 0, SEEK_END); /* Seek to the end of the file */
+		length = ftell(fptr); /* Find out how many bytes into the file we are */
+		buf = (char*)malloc(length + 1); /* Allocate a buffer for the entire length of the file and a null terminator */
+		fseek(fptr, 0, SEEK_SET); /* Go back to the beginning of the file */
+		fread(buf, length, 1, fptr); /* Read the contents of the file in to the buffer */
+		fclose(fptr); /* Close the file */
+		buf[length] = 0; /* Null terminator */
+
+		return buf; /* Return the buffer */
+	}
+	
+	bool loadShader(char * shaderVertexFile, char * shaderFragFile, GLuint & o_shaderProgram)
+	{
+		using namespace Parameters::Shader;
+
+		glUseProgram(0);
+
+		glDetachShader(shaderProgram, vertexshader);
+		glDetachShader(shaderProgram, fragmentshader);
+		glDeleteProgram(shaderProgram);
+		glDeleteShader(vertexshader);
+		glDeleteShader(fragmentshader);
+
+		if(vertexsource)
+			free(vertexsource);
+		if(fragmentsource)
+			free(fragmentsource);
+
+
+		int IsCompiled_VS, IsCompiled_FS;
+		int IsLinked;
+
+		/* Read our shaders into the appropriate buffers */
+		vertexsource = UtilityFunc::filetobuf(shaderVertexFile);
+		fragmentsource = UtilityFunc::filetobuf(shaderFragFile);
+
+		/* Create an empty vertex shader handle */
+		vertexshader = glCreateShader(GL_VERTEX_SHADER);
+
+		/* Send the vertex shader source code to GL */
+		/* Note that the source code is NULL character terminated. */
+		/* GL will automatically detect that therefore the length info can be 0 in this case (the last parameter) */
+		glShaderSource(vertexshader, 1, (const GLchar**)&vertexsource, 0);
+
+		/* Compile the vertex shader */
+		glCompileShader(vertexshader);
+
+		glGetShaderiv(vertexshader, GL_COMPILE_STATUS, &IsCompiled_VS);
+		if (IsCompiled_VS == FALSE)
+		{
+			return false;
+		}
+
+		/* Create an empty fragment shader handle */
+		fragmentshader = glCreateShader(GL_FRAGMENT_SHADER);
+
+		/* Send the fragment shader source code to GL */
+		/* Note that the source code is NULL character terminated. */
+		/* GL will automatically detect that therefore the length info can be 0 in this case (the last parameter) */
+		glShaderSource(fragmentshader, 1, (const GLchar**)&fragmentsource, 0);
+
+		/* Compile the fragment shader */
+		glCompileShader(fragmentshader);
+
+		glGetShaderiv(fragmentshader, GL_COMPILE_STATUS, &IsCompiled_FS);
+		if (IsCompiled_FS == FALSE)
+		{
+			return false;
+		}
+
+		/* If we reached this point it means the vertex and fragment shaders compiled and are syntax error free. */
+		/* We must link them together to make a GL shader program */
+		/* GL shader programs are monolithic. It is a single piece made of 1 vertex shader and 1 fragment shader. */
+		/* Assign our program handle a "name" */
+		shaderProgram = glCreateProgram();
+
+		/* Attach our shaders to our program */
+		glAttachShader(shaderProgram, vertexshader);
+		glAttachShader(shaderProgram, fragmentshader);
+
+
+		/* Link our program */
+		/* At this stage, the vertex and fragment programs are inspected, optimized and a binary code is generated for the shader. */
+		/* The binary code is uploaded to the GPU, if there is no error. */
+		glLinkProgram(shaderProgram);
+
+		/* Again, we must check and make sure that it linked. If it fails, it would mean either there is a mismatch between the vertex */
+		/* and fragment shaders. It might be that you have surpassed your GPU's abilities. Perhaps too many ALU operations or */
+		/* too many texel fetch instructions or too many interpolators or dynamic loops. */
+
+		glGetProgramiv(shaderProgram, GL_LINK_STATUS, (int *)&IsLinked);
+		if (IsLinked == FALSE)
+		{
+			return false;
+		}
+
+		/* Load the shader into the rendering pipeline */
+		glUseProgram(shaderProgram);
+		return true;
+	}
+}
+using namespace Parameters;
+namespace BindingFunctions
+{
+	void renderScene(void)
+	{
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		/* Invoke glDrawArrays telling that our data is a line loop and we want to draw 2-4 vertexes */
+		glDrawArrays(GL_POINTS, 0, meshLoader.NV());
+		//glDrawArrays(GL_LINE_LOOP, 0, 3);
+		//glDrawArrays(GL_LINE_LOOP, 0, 4);
+		glutSwapBuffers();
+	}
+
+	void keyFunc(unsigned char keyChar, int x, int y)
+	{
+		switch (keyChar)
+		{
+		case 27: // escape
+		{
+			glutDestroyWindow(windowId);
+			exit(0);
+		}
+			break;
+		case 32: // escape
+		{
+			if (!UtilityFunc::loadShader("vertexShader.vert", "fragShader.frag", Shader::shaderProgram))
+			{
+				return;
+			}
+		}
+		break;
+		case 'p':
+		{
+			ViewPort::bProspective = !ViewPort::bProspective;
+		}
+		break;
+		case GLUT_KEY_F6:
+		{
+			if (!UtilityFunc::loadShader("tutorial2.vert", "tutorial2.frag", Shader::shaderProgram))
+			{
+				return;
+			}
+		}
+			break;
+		default:
+			break;
+		}
+	}
+
+	void postRender(void)
+	{
+		using namespace Parameters::ViewPort;
+		GLint camId = glGetUniformLocation(Shader::shaderProgram, "cameraMatrix");
+
+		cy::Matrix4<float> scaleMatrixObject = cy::Matrix4<float>::MatrixScale(cy::Point3f(0.2, 0.2, 0.2));
+		cy::Matrix4<float> rotMatrixObject = cy::Matrix4<float>::MatrixRotation(cy::Point3f(0, 1.0, 0.0), 0);
+		cy::Matrix4<float> transMatrixObject = cy::Matrix4<float>::MatrixTrans(cy::Point3f(0, 0.0, 0.0));
+
+		cy::Matrix4<float> scaleMatrixCam = cy::Matrix4<float>::MatrixScale(cy::Point3f(1, 1, 1));
+		curRotMatrixCam = cy::Matrix4<float>::MatrixRotation(cameraRotAxis, -cameraRotAngle);
+		cy::Matrix4<float> rotMatrixCam = prevRotMatrixCam * curRotMatrixCam;
+
+
+		cy::Point4f cameraForward(0, 0, 1.0f, 0.0f);
+		cameraForward = rotMatrixCam * cameraForward;
+		cameraForward.Normalize();
+		cy::Matrix4<float> transMatrixCam = cy::Matrix4<float>::MatrixTrans(cy::Point3f(cameraForward.x * cameraDistance, cameraForward.y * cameraDistance, cameraForward.z * cameraDistance));
+
+
+		cy::Matrix4<float> cameraToWorldMatrix = transMatrixCam * rotMatrixCam * scaleMatrixCam;
+		cy::Matrix4<float> worldToCameraMatrix = cameraToWorldMatrix.GetInverse();
+		viewPort = cy::Matrix4<float>::MatrixPerspective(PI / 4, 4 / 3.0f, 0.1f, 100.0f);
+		if (!bProspective)
+		{
+			viewPort.OrthogonalizeX();
+			viewPort.OrthogonalizeY();
+			viewPort.OrthogonalizeZ();
+		}
+
+		cy::Matrix4<float> objectToWorldMatrix = viewPort * worldToCameraMatrix *transMatrixObject * rotMatrixObject * scaleMatrixObject;
+
+		glUniformMatrix4fv(camId, 1, GL_FALSE, objectToWorldMatrix.data);
+
+		glutPostRedisplay();
+		return;
+
+		timeUsed += 1 / 60.0f;
+		if (timeUsed >= 1)
+		{
+			timeUsed = 0.0f;
+			std::random_device dec;
+			std::mt19937 gen(dec());
+			std::uniform_int_distribution<int> dis(0, 255);
+			oldR = newR;
+			oldB = newB;
+			oldG = newG;
+			newR = dis(dec)/255.0f;
+			newG = dis(dec)/255.0f;
+			newB = dis(dec)/255.0f;
+		}
+
+		GLclampf r = MathFunc::lerp(oldR, newR, timeUsed);
+		GLclampf g = MathFunc::lerp(oldG, newG, timeUsed);
+		GLclampf b = MathFunc::lerp(oldB, newB, timeUsed);
+
+		glClearColor(r, g, b, 1);
+		glutPostRedisplay();
+	}
+
+	void mouseMotionFunc(int x, int y)
+	{
+		using namespace Parameters::ViewPort;
+		switch (curMouseState)
+		{
+			case eRotateMode:
+			{
+				cy::Point3f v1(x, y, 0);
+				cy::Point3f v2(lastX, lastY, 0);
+
+				cy::Point3f v3 = v2 - v1;
+				cameraRotAngle = v3.Length()/1000;
+				v3.Normalize();
+				cy::Point3f v4(0, 0, -1.0f);
+
+				cameraRotAxis = v3.Cross(v4);
+			}
+				break;
+
+			case eZoomMode:
+			{
+				cy::Point3f v1(x, y, 0);
+				cy::Point3f v2(lastX, lastY, 0);
+
+				cy::Point3f v3 = v2 - v1;
+
+				int direction = v1.y > v2.y ?-1:1;
+				cameraDistance += v3.Length() / 1000 * direction;
+			}
+				break;
+		}
+
+	}
+
+	void mouseClickFunc(int mouse, int state, int x, int y)
+	{
+		using namespace Parameters::ViewPort;
+		if (state == GLUT_DOWN && mouse == GLUT_LEFT_BUTTON) {
+			curMouseState = eRotateMode;
+		}
+		else if (state == GLUT_DOWN && mouse == GLUT_RIGHT_BUTTON) {
+			curMouseState = eZoomMode;
+		}
+		else
+		{
+			curMouseState = edefaultMode;
+			prevRotMatrixCam = curRotMatrixCam;
+		}
+		lastX = x;
+		lastY = y;
+	}
+}
+
+
+
+int main(int argc, char *argv[])
+{
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
+	glutInitWindowPosition(0, 0);
+	glutInitWindowSize(1280, 960);
+	windowId = glutCreateWindow("Haha");
+	glClearColor(1, 0, 0, 1);
+
+	glutDisplayFunc(BindingFunctions::renderScene);
+	glutIdleFunc(BindingFunctions::postRender);
+	glutKeyboardFunc(BindingFunctions::keyFunc);
+	glutMotionFunc(BindingFunctions::mouseMotionFunc);
+	glutMouseFunc(BindingFunctions::mouseClickFunc);
+
+	//glutMouseFunc
+	GLenum result = glewInit();
+	if (result != GLEW_OK)
+	{
+		fprintf(stderr, "Error: '%s'\n", glewGetErrorString(result));
+		return 1;
+	}
+
+	GLuint vao, vbo; /* Create handles for our Vertex Array Object and two Vertex Buffer Objects */
+
+	meshLoader.LoadFromFileObj("teapot.obj");
+
+	/* Allocate and assign a Vertex Array Object to our handle */
+	glGenVertexArrays(1, &vao);
+
+	/* Bind our Vertex Array Object as the current used object */
+	glBindVertexArray(vao);
+
+	/* Allocate and assign two Vertex Buffer Objects to our handle */
+	glGenBuffers(2, &vbo);
+
+	/* Bind our first VBO as being the active buffer and storing vertex attributes (coordinates) */
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	/* Copy the vertex data from diamond to our buffer */
+	/* 8 * sizeof(GLfloat) is the size of the diamond array, since it contains 8 GLfloat values */
+	glBufferData(GL_ARRAY_BUFFER, meshLoader.NV() * sizeof(cyPoint3f), &meshLoader.V(0), GL_STATIC_DRAW);
+
+	/* Specify that our coordinate data is going into attribute index 0, and contains two floats per vertex */
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	/* Enable attribute index 0 as being used */
+	glEnableVertexAttribArray(0);
+
+	if (!UtilityFunc::loadShader("vertexShader.vert", "fragShader.frag", Shader::shaderProgram))
+	{
+		return 0;
+	}
+
+	glutMainLoop();
+
+
+	/* Cleanup all the things we bound and allocated */
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+
+	glDeleteProgram(Shader::shaderProgram);
+
+	glDeleteBuffers(1, &vbo);
+	glDeleteVertexArrays(1, &vao);
+
+	return 0;
+}

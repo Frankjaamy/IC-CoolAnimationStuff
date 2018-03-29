@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\cy">
+      <UniqueIdentifier>{ed673209-2a7e-4993-826c-515fdebb9774}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\glut">
+      <UniqueIdentifier>{694fc0e6-f0af-47bb-b11b-831835ceea1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\lode">
+      <UniqueIdentifier>{5510323a-0f0e-4194-8f6e-f36e08e27345}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Includes\TextureLoader\lodepng.cpp">
+      <Filter>Header Files\lode</Filter>
+    </ClCompile>
+    <ClCompile Include="Includes\TextureLoader\lodepng_util.cpp">
+      <Filter>Header Files\lode</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Includes\cy\cyCore.h">
+      <Filter>Header Files\cy</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\cy\cyGL.h">
+      <Filter>Header Files\cy</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\cy\cyMatrix.h">
+      <Filter>Header Files\cy</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\cy\cyPoint.h">
+      <Filter>Header Files\cy</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\cy\cyTriMesh.h">
+      <Filter>Header Files\cy</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\GL\freeglut.h">
+      <Filter>Header Files\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\GL\freeglut_ext.h">
+      <Filter>Header Files\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\GL\freeglut_std.h">
+      <Filter>Header Files\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\GL\glut.h">
+      <Filter>Header Files\glut</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\TextureLoader\lodepng.h">
+      <Filter>Header Files\lode</Filter>
+    </ClInclude>
+    <ClInclude Include="Includes\TextureLoader\lodepng_util.h">
+      <Filter>Header Files\lode</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Content\fragPanel.frag">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Content\fragShader.frag">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Content\vertexPanel.vert">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Content\vertexShader.vert">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

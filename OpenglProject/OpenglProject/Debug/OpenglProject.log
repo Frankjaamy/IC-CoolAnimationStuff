@@ -1,0 +1,5 @@
+﻿  main.cpp
+c:\users\u1072146\desktop\assignment\openglproject\openglproject\main.cpp(527): warning C4018: '<': signed/unsigned mismatch
+c:\users\u1072146\desktop\assignment\openglproject\openglproject\main.cpp(516): warning C4715: 'initWindow': not all control paths return a value
+  OpenglProject.vcxproj -> C:\Users\u1072146\Desktop\Assignment\OpenglProject\Debug\OpenglProject.exe
+  OpenglProject.vcxproj -> C:\Users\u1072146\Desktop\Assignment\OpenglProject\Debug\OpenglProject.pdb (Partial PDB)
