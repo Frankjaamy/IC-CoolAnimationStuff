@@ -138,6 +138,7 @@
     <ClCompile Include="Includes\TextureLoader\lodepng.cpp" />
     <ClCompile Include="Includes\TextureLoader\lodepng_util.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ynMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Includes\cy\cyCore.h" />
@@ -151,6 +152,7 @@
     <ClInclude Include="Includes\GL\glut.h" />
     <ClInclude Include="Includes\TextureLoader\lodepng.h" />
     <ClInclude Include="Includes\TextureLoader\lodepng_util.h" />
+    <ClInclude Include="ynMesh.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Content\fragPanel.frag" />

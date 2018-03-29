@@ -6,8 +6,6 @@
 #include "GL/glew.h"
 #include "GL/freeglut.h"
 
-#include "TextureLoader/lodepng.h"
-
 #include "cy/cyMatrix.h"
 #include "cy/cyTriMesh.h"
 #include "cy/cyGL.h"
@@ -15,37 +13,22 @@
 #include "glm\matrix.hpp"
 #include "glm\gtc\matrix_transform.hpp"
 
+#include "ynMesh.h"
 
 const float PI = 3.1415926f;
-
-struct Texture
-{
-	GLuint textureId;
-	GLuint textureObjectId;
-};
-
 namespace Parameters 
 {
+	CYN::Mesh * panel = nullptr;
+	CYN::Mesh * teapot = nullptr;
+
 	float light[3] = { -3.0,0.0f,-5.0f };
 	cy::Point3f lightRotAxis(0, 1, 0);
 	float lightRotAngle = 0.0f;
 	cy::Matrix4<float> curLightRotMatrixCam = cy::Matrix4<float>::MatrixRotation(cy::Point3f(1.0, 0.0, 0.0), 0);
 
 	int windowId;
-	GLclampf oldR = 0.0f, oldG = 0.0f, oldB = 0.0f;
-	GLclampf newR = 1.0f, newG = 1.0f, newB = 1.0f;
-	float timeUsed = 0.0f;
 	GLuint verBufObject;
 	GLuint verArrayObject;
-
-	cy::TriMesh panelLoader;
-	cy::TriMesh teapotLoader;
-
-	Texture tex1;
-	Texture tex2;
-
-	GLuint vao1, vbo1, nbo1, uvbo1;
-	GLuint vao2, vbo2, nbo2, uvbo2;
 
 	GLuint FramebufferName = 0;
 	GLuint renderedTexture;
@@ -102,17 +85,6 @@ namespace Parameters
 		cy::Matrix4<float> viewPort;
 		float cameraRotAngle = 0.0f;
 		float lastX = 0, lastY = 0;
-	}
-}
-
-
-namespace MathFunc
-{
-	float lerp(float a, float b, float percentage)
-	{
-		if (percentage > 1.0f) percentage = 1.0f;
-		if (percentage < 0.0f) percentage = 0.0f;
-		return a * (1 - percentage) + b*percentage;
 	}
 }
 namespace UtilityFunc
@@ -197,26 +169,6 @@ namespace UtilityFunc
 		}
 		return true;
 	}
-
-	bool loadTexture(Texture & o_Texture, const char * i_textureFile)
-	{
-		uint8_t * data = nullptr;
-		unsigned width;
-		unsigned height;
-		if (lodepng_decode32_file(&data, &width, &height, i_textureFile))
-		{
-			assert("load texture fail");
-			return false;
-		}
-		o_Texture.textureId = GL_TEXTURE_2D;
-		glGenTextures(1, &o_Texture.textureObjectId);
-
-		glBindTexture(o_Texture.textureId, o_Texture.textureObjectId);
-		glTexImage2D(o_Texture.textureId, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid *)data);
-		glTexParameterf(o_Texture.textureId, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(o_Texture.textureId, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		return true;
-	}
 }
 
 using namespace Parameters;
@@ -225,14 +177,6 @@ namespace BindingFunctions
 	void renderScene(void)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
-
-		glEnable(GL_DEPTH_TEST);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glUseProgram(Shader::shaderShadow);
-		glBindVertexArray(Parameters::vao1);
-		glDrawArrays(GL_TRIANGLES, 0, Parameters::panelLoader.NF() * 3);
-		glBindVertexArray(Parameters::vao2);
-		glDrawArrays(GL_TRIANGLES, 0, Parameters::teapotLoader.NF() * 3);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -240,70 +184,16 @@ namespace BindingFunctions
 #if 1
 		glUseProgram(Shader::shaderTeapot);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, tex1.textureObjectId);
+		glBindTexture(GL_TEXTURE_2D, teapot->textures_[0].id);
 		glUniform1i(Teapot::texture0Location, 0);
 
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, tex2.textureObjectId);
+		glBindTexture(GL_TEXTURE_2D, teapot->textures_[1].id);
 		glUniform1i(Teapot::texture1Location, 1);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, renderedTexture);
-		Panel::texture0Location = glGetUniformLocation(Shader::shaderTeapot, "shadowMap");
-		glUniform1i(Panel::texture0Location, 2);
-
-		glBindVertexArray(Parameters::vao1);
-		glDrawArrays(GL_TRIANGLES, 0, Parameters::panelLoader.NF() * 3);
-
-		glUseProgram(Shader::shaderTeapot);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, tex1.textureObjectId);
-		glUniform1i(Teapot::texture0Location, 0);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, tex2.textureObjectId);
-		glUniform1i(Teapot::texture1Location, 1);
-
-		glBindVertexArray(Parameters::vao2);
-		glDrawArrays(GL_TRIANGLES, 0, Parameters::teapotLoader.NF() * 3);
+		teapot->draw();
 #endif
 		glutSwapBuffers();
 
-	}
-
-	void keyFunc(unsigned char keyChar, int x, int y)
-	{
-		switch (keyChar)
-		{
-		case 27: // escape
-		{
-			glutDestroyWindow(windowId);
-			exit(0);
-		}
-		break;
-		case 'w':
-		{
-			Parameters::light[1] += 0.15f;
-		}
-		break;
-		case 's':
-		{
-			Parameters::light[1] -= 0.15f;
-		}
-		break;
-		case 'a':
-		{
-			Parameters::light[0] -= 0.15f;
-		}
-		break;
-		case 'd':
-		{
-			Parameters::light[0] += 0.15f;
-		}
-		break;
-		default:
-		break;
-		}
 	}
 
 	void postRender(void)
@@ -340,7 +230,6 @@ namespace BindingFunctions
 		glUniform3fv(Teapot::lightDirection, 1, &lightCY.x);
 		glUniform3fv(Teapot::cameraPosition, 1, &cameraPos.x);
 
-
 		glUseProgram(Shader::shaderShadow);
 		GLint depthMatrixID = glGetUniformLocation(Shader::shaderShadow, "depthMVP");
 		glm::vec3 lightInvDir = glm::vec3(-lightCY.x, lightCY.y, -lightCY.z);
@@ -372,6 +261,39 @@ namespace BindingFunctions
 		return;
 	}
 
+	void keyFunc(unsigned char keyChar, int x, int y){
+		switch (keyChar)
+		{
+		case 27: // escape
+		{
+			glutDestroyWindow(windowId);
+			exit(0);
+		}
+		break;
+		case 'w':
+		{
+			Parameters::light[1] += 0.15f;
+		}
+		break;
+		case 's':
+		{
+			Parameters::light[1] -= 0.15f;
+		}
+		break;
+		case 'a':
+		{
+			Parameters::light[0] -= 0.15f;
+		}
+		break;
+		case 'd':
+		{
+			Parameters::light[0] += 0.15f;
+		}
+		break;
+		default:
+			break;
+		}
+	}
 	void mouseMotionFunc(int x, int y)
 	{
 		using namespace Parameters::ViewPort;
@@ -419,7 +341,6 @@ namespace BindingFunctions
 		}
 
 	}
-
 	void mouseClickFunc(int mouse, int state, int x, int y)
 	{
 		using namespace Parameters::ViewPort;
@@ -442,22 +363,6 @@ namespace BindingFunctions
 	}
 }
 
-void buildDataBuffer(unsigned int numOfVerticesNeeded, const cyTriMesh & mesh, cyPoint3f * & vertexData, cyPoint3f * & normalData, cyPoint3f * & uvData)
-{
-	vertexData = new cyPoint3f[numOfVerticesNeeded];
-	normalData = new cyPoint3f[numOfVerticesNeeded];
-	uvData = new cyPoint3f[numOfVerticesNeeded];
-	for (unsigned int i = 0; i < numOfVerticesNeeded; i++)
-	{
-		unsigned int vertexIndex = mesh.F(i / 3).v[i % 3];
-		unsigned int normalIndex = mesh.FN(i / 3).v[i % 3];
-		unsigned int uvIndex = mesh.FT(i / 3).v[i % 3];
-
-		vertexData[i] = mesh.V(vertexIndex);
-		normalData[i] = mesh.VN(normalIndex);
-		uvData[i] = mesh.VT(uvIndex);
-	}
-}
 
 void buildOpenGLBuffer(unsigned int numOfVerticesNeeded, GLuint & vao, GLuint & vbo, GLuint & nbo, GLuint & uvbo, cyPoint3f * vertexData, cyPoint3f * normalData, cyPoint3f * uvData)
 {
@@ -517,64 +422,13 @@ int initWindow(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	initWindow(argc, argv);
-	panelLoader.LoadFromFileObj("panel.obj");
-	unsigned int numOfVerticesNeeded = panelLoader.NF() * 3;
-	cyPoint3f * vertexDataPanel = nullptr;
-	cyPoint3f * normalDataPanel = nullptr;
-	cyPoint3f * uvDataPanel = nullptr;
+	teapot = CYN::MeshLoader::MeshLoaderFactory::loadMeshFromFile("teapot.obj", "cyTriMesh");
+	if (teapot) teapot->initOpenGL();
 
-	buildDataBuffer(numOfVerticesNeeded, panelLoader, vertexDataPanel, normalDataPanel, uvDataPanel);
-	for (int i = 0; i < numOfVerticesNeeded; i++)
-	{
-		vertexDataPanel[i] *= 5.0f;
-	}
-	buildOpenGLBuffer(numOfVerticesNeeded, vao1, vbo1, nbo1, uvbo1, vertexDataPanel, normalDataPanel, uvDataPanel);
-	
-	teapotLoader.LoadFromFileObj("teapot.obj");
-	numOfVerticesNeeded = teapotLoader.NF() * 3;
-
-	cyPoint3f * vertexDataTeapot = nullptr;
-	cyPoint3f * normalDataTeapot = nullptr;
-	cyPoint3f * uvDataTeapot = nullptr;
-
-	buildDataBuffer(numOfVerticesNeeded, teapotLoader, vertexDataTeapot, normalDataTeapot, uvDataTeapot);
-	buildOpenGLBuffer(numOfVerticesNeeded, vao2, vbo2, nbo2, uvbo2, vertexDataTeapot, normalDataTeapot, uvDataTeapot);
-
-	if (!UtilityFunc::loadTexture(tex1, panelLoader.M(0).map_Kd.data))
-	{
-		return 0;
-	}
-	if (!UtilityFunc::loadTexture(tex2, panelLoader.M(0).map_Ks.data))
-	{
-		return 0;
-	}
 	if (!UtilityFunc::loadShader("vertexShader.vert", "fragShader.frag", Shader::shaderTeapot))
 	{
 		return 0;
 	}
-
-	if (!UtilityFunc::loadShader("vertexPanel.vert", "fragPanel.frag", Shader::shaderShadow))
-	{
-		return 0;
-	}
-#if 1
-	glGenFramebuffers(1, &FramebufferName);
-	glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
-
-	glGenTextures(1, &Parameters::renderedTexture);
-	glBindTexture(GL_TEXTURE_2D, renderedTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 1024, 1024, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, renderedTexture, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-	{
-		return 1;
-	}
-#endif
 	{
 		Teapot::texture0Location = glGetUniformLocation(Shader::shaderTeapot, "texSampler0");
 		Teapot::texture1Location = glGetUniformLocation(Shader::shaderTeapot, "texSampler1");
@@ -586,6 +440,7 @@ int main(int argc, char *argv[])
 
 	}
 	glutMainLoop();
+	delete teapot;
 
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
