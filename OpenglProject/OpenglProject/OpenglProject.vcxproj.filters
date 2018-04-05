@@ -36,6 +36,12 @@
     <ClCompile Include="ynMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ynMeshLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ynModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Includes\cy\cyCore.h">
@@ -72,6 +78,15 @@
       <Filter>Header Files\lode</Filter>
     </ClInclude>
     <ClInclude Include="ynMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderLoader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ynMeshLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ynModel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

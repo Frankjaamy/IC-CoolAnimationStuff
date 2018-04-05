@@ -12,6 +12,7 @@
 #include "cy/cyTriMesh.h"
 #include "cy/cyGL.h"
 
+#include "assimp/mesh.h"
 namespace CYN
 {
 	struct Vertex
@@ -24,6 +25,7 @@ namespace CYN
 	{
 		GLuint id;
 		GLuint type;
+		std::string path;
 	};
 	class Mesh
 	{
@@ -31,46 +33,18 @@ namespace CYN
 		void initOpenGL();
 		void draw();
 	public:
-		cyTriMesh * loader_;
-		std::vector<Vertex> vertices_;
-		std::vector<Texture> textures_;
-		Mesh(const std::vector<Vertex> & i_verticesData, const std::vector<Texture> i_texData, cyTriMesh * i_loader = nullptr);
+		cyTriMesh * m_pMeshLoader;
+		aiMesh * m_pAiMesh;
+		std::vector<Vertex> m_vVertices;
+		std::vector<Texture> m_vTextures;
+		std::vector<unsigned> m_vIndices;
+		Mesh(const std::vector<Vertex> & i_verticesData, const std::vector<Texture> & i_texData, cyTriMesh * i_loader = nullptr);
+		Mesh(const std::vector<Vertex> & i_verticesData, const std::vector<Texture> & i_texData, const std::vector<unsigned> & i_indices, aiMesh * i_mesh = nullptr);
 		~Mesh();
 	public:
-		inline GLuint getVAO() const { return vao_; }
+		inline GLuint getVAO() const { return m_gliVao; }
 	private:
-		GLuint vao_, vbo_, nbo_, uvbo_;
-
+		GLuint m_gliVao, m_gliVbo, m_gliNbo, m_gliUvbo;
+		GLuint m_gliIndiceBuffer;
 	};
-	namespace MeshLoader
-	{
-		class MeshLoaderBase
-		{
-		public:
-			virtual Mesh * loadMeshFromFile(const char * fileName) = 0;
-			bool loadTexture(Texture & o_Texture, const char * i_texFile);
-		};
-
-		class CyMeshLoader : public MeshLoaderBase
-		{
-		public:
-			virtual Mesh * loadMeshFromFile(const char * fileName);
-		private:
-			void buildDataBuffer(unsigned int numOfVerticesNeeded, const cyTriMesh & mesh, glm::vec3 * & vertexData, glm::vec3 * & normalData, glm::vec3 * & uvData);
-			inline glm::vec3 convert_from_cyPoint3f(const cy::Point3f & point)
-			{
-				glm::vec3 outVec;
-				outVec.x = point.x;
-				outVec.y = point.y;
-				outVec.z = point.z;
-				return outVec;
-			}
-		};
-
-		class MeshLoaderFactory
-		{
-		public:
-			static Mesh * loadMeshFromFile(const char * fileName, std::string fileType);
-		};
-	}
 }

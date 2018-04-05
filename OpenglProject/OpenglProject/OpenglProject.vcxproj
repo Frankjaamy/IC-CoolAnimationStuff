@@ -71,9 +71,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -84,7 +86,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)Includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>glew32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glew32.lib;glew32s.lib;assimp-vc140-mt.lib;freeglutd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -97,7 +99,7 @@
       </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>freeglutd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -129,7 +131,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>freeglutd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freeglutd.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Link>
@@ -139,6 +141,8 @@
     <ClCompile Include="Includes\TextureLoader\lodepng_util.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ynMesh.cpp" />
+    <ClCompile Include="ynMeshLoader.cpp" />
+    <ClCompile Include="ynModel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Includes\cy\cyCore.h" />
@@ -152,7 +156,10 @@
     <ClInclude Include="Includes\GL\glut.h" />
     <ClInclude Include="Includes\TextureLoader\lodepng.h" />
     <ClInclude Include="Includes\TextureLoader\lodepng_util.h" />
+    <ClInclude Include="ynMeshLoader.h" />
+    <ClInclude Include="ShaderLoader.hpp" />
     <ClInclude Include="ynMesh.h" />
+    <ClInclude Include="ynModel.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Content\fragPanel.frag" />
